@@ -13,8 +13,8 @@ typescript/dist/
 # Desktop extension build artifacts (server/*.js are copied from typescript/dist)
 desktop-extension/server/
 desktop-extension/*.dxt
-# NOTE: odoo-connector.mcpb is intentionally committed so it can be distributed
-# via a direct download link (see desktop-extension/README.md).
+# The bundle is distributed via GitHub Releases, not committed to the repo.
+desktop-extension/*.mcpb
 
 # Secrets
 .env

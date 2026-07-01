@@ -6,8 +6,8 @@ terminal, no config files, no Python/Node install required.
 
 ## For end users
 
-1. Download [**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/raw/main/desktop-extension/odoo-connector.mcpb)
-   (on the file page, click **Download raw file**).
+1. Download **`odoo-connector.mcpb`** from the
+   [latest release](https://github.com/eastec-erp/odoo-connector/releases/latest).
 2. Open **Claude Desktop → Settings → Extensions**.
 3. Scroll to **Advanced** and click **Install extension…**, then select the
    downloaded `odoo-connector.mcpb`.
@@ -38,17 +38,19 @@ block declares the four fields shown in the install form, which are mapped to
 
 ## Distributing
 
-`odoo-connector.mcpb` is **committed to the repo** so it can be shared as a
-direct download link (no GitHub Release needed — GitHub Desktop can push it like
-any other file). After running `./build.sh`, commit the updated bundle. The
-public download link is:
+`odoo-connector.mcpb` is distributed via **GitHub Releases** — it is a build
+artifact and is *not* committed to the repo. To cut a release:
+
+1. `./build.sh` to produce a fresh `odoo-connector.mcpb`.
+2. Create a release (repo → Releases → new), tag e.g. `v0.1.0`, and **attach**
+   the `.mcpb` as a binary. Leave "pre-release" unticked so it counts as latest.
+3. Publish. The stable download link is:
 
 ```
-https://github.com/eastec-erp/odoo-connector/raw/main/desktop-extension/odoo-connector.mcpb
+https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb
 ```
 
-> The repository must be **public** for others to download this link.
+> The repository must be **public** for others to use this link.
 >
-> Alternative: attach the `.mcpb` to a **GitHub Release** instead and share
-> `.../releases/latest/download/odoo-connector.mcpb`. That keeps binaries out of
-> Git history, but can't be done from GitHub Desktop (use the web UI or `gh`).
+> Note: uploading a release asset can't be done from GitHub Desktop — use the
+> web UI, or `gh release create <tag> odoo-connector.mcpb`.
