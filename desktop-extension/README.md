@@ -6,7 +6,8 @@ terminal, no config files, no Python/Node install required.
 
 ## For end users
 
-1. Download [**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb).
+1. Download [**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/raw/main/desktop-extension/odoo-connector.mcpb)
+   (on the file page, click **Download raw file**).
 2. Open **Claude Desktop → Settings → Extensions**.
 3. Drag the file in (or double-click it).
 4. Fill in the form — **Odoo URL**, **Database**, **Username**, **API key** —
@@ -36,14 +37,17 @@ block declares the four fields shown in the install form, which are mapped to
 
 ## Distributing
 
-Attach `odoo-connector.mcpb` to a **GitHub Release** — that's the download link
-you share. The file is a build artifact and is not committed to the repo. The
-stable link that always points at the newest release's asset is:
+`odoo-connector.mcpb` is **committed to the repo** so it can be shared as a
+direct download link (no GitHub Release needed — GitHub Desktop can push it like
+any other file). After running `./build.sh`, commit the updated bundle. The
+public download link is:
 
 ```
-https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb
+https://github.com/eastec-erp/odoo-connector/raw/main/desktop-extension/odoo-connector.mcpb
 ```
 
-> **Note:** for others to download this, the repository (or at least the
-> release) must be **public**. A private repo's release assets are only
-> reachable by users with repo access.
+> The repository must be **public** for others to download this link.
+>
+> Alternative: attach the `.mcpb` to a **GitHub Release** instead and share
+> `.../releases/latest/download/odoo-connector.mcpb`. That keeps binaries out of
+> Git history, but can't be done from GitHub Desktop (use the web UI or `gh`).
