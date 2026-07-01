@@ -7,6 +7,9 @@
  * Docs: https://www.odoo.com/documentation/master/developer/reference/external_api.html
  */
 
+import { fetch } from "undici";
+import { configureProxy, getActiveProxyInfo, getDispatcher } from "./proxy.js";
+
 export class OdooError extends Error {}
 
 interface JsonRpcResponse {
@@ -25,6 +28,7 @@ export interface ConnectionCheck {
 export interface ConnectionResult {
   ok: boolean;
   url: string;
+  proxy?: string;
   database?: string;
   server_version?: unknown;
   uid?: number;
@@ -105,15 +109,34 @@ export class OdooClient {
     }
   }
 
+  private proxyReady?: Promise<void>;
+
+  /** Detect and install the system proxy once, before the first request. */
+  private ensureProxy(): Promise<void> {
+    if (!this.proxyReady) {
+      this.proxyReady = configureProxy(this.url).then(() => undefined);
+    }
+    return this.proxyReady;
+  }
+
+  /** fetch() routed through the auto-detected proxy dispatcher (if any). */
+  private async httpFetch(
+    url: string,
+    init?: Parameters<typeof fetch>[1]
+  ): Promise<Awaited<ReturnType<typeof fetch>>> {
+    await this.ensureProxy();
+    return fetch(url, { ...init, dispatcher: getDispatcher() });
+  }
+
   /** Low-level JSON-RPC call against a service/method. */
   private async jsonRpc(
     service: string,
     method: string,
     args: unknown[]
   ): Promise<unknown> {
-    let res: Response;
+    let res: Awaited<ReturnType<typeof fetch>>;
     try {
-      res = await fetch(`${this.url}/jsonrpc`, {
+      res = await this.httpFetch(`${this.url}/jsonrpc`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -199,7 +222,7 @@ export class OdooClient {
    */
   private async listDatabases(): Promise<string[]> {
     try {
-      const res = await fetch(`${this.url}/web/database/list`, {
+      const res = await this.httpFetch(`${this.url}/web/database/list`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: {} }),
@@ -272,6 +295,14 @@ export class OdooClient {
   async testConnection(): Promise<ConnectionResult> {
     const checks: ConnectionCheck[] = [];
 
+    // 0. Proxy detection (informational — helps diagnose corporate networks).
+    await this.ensureProxy();
+    const pinfo = getActiveProxyInfo();
+    const proxy = pinfo.proxyUrl
+      ? `${pinfo.proxyUrl} — ${pinfo.source}`
+      : pinfo.source;
+    checks.push({ step: "Proxy", status: "pass", detail: proxy });
+
     // 1. Is the server reachable and speaking Odoo?
     let server_version: unknown;
     try {
@@ -287,9 +318,12 @@ export class OdooClient {
       return {
         ok: false,
         url: this.url,
+        proxy,
         checks,
         message: "❌ Could not reach the Odoo server.",
-        hint: "Check the Odoo URL — it should include https:// and point at your instance, e.g. https://yourco.odoo.com",
+        hint: pinfo.proxyUrl
+          ? `Tried via proxy ${pinfo.proxyUrl}. If that's wrong, set HTTPS_PROXY, or check the corporate proxy/firewall allows ${this.url}. TLS-interception (CERT_* errors) needs the corporate root CA via NODE_EXTRA_CA_CERTS.`
+          : `No proxy was detected. If this machine reaches the internet through a corporate proxy, set the HTTPS_PROXY field/env var. Otherwise check the Odoo URL includes https:// and the firewall allows ${this.url}.`,
       };
     }
 
@@ -345,6 +379,7 @@ export class OdooClient {
     return {
       ok: true,
       url: this.url,
+      proxy,
       database,
       server_version,
       uid,

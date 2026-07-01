@@ -12,8 +12,9 @@ echo "==> Compiling TypeScript server"
 ( cd "$repo/typescript" && npm install && npx tsc )
 
 echo "==> Copying compiled server into extension"
+rm -rf "$here/server"
 mkdir -p "$here/server"
-cp "$repo/typescript/dist/index.js" "$repo/typescript/dist/odoo-client.js" "$here/server/"
+cp "$repo"/typescript/dist/*.js "$here/server/"
 
 echo "==> Installing production dependencies"
 ( cd "$here" && npm install --omit=dev --no-package-lock )

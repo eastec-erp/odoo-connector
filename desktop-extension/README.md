@@ -20,6 +20,22 @@ terminal, no config files, no Python/Node install required.
 
 That's it. Claude now has the Odoo tools available.
 
+### Corporate networks / proxies
+
+The connector **auto-detects the system proxy** — if the machine reaches the
+internet through a corporate proxy, it's picked up automatically (Windows
+`ProxyServer`/PAC auto-config, macOS system proxy, or the `HTTPS_PROXY` env var).
+No configuration needed in the common case.
+
+- To **override**, set the optional **HTTPS proxy** field, e.g.
+  `http://proxy.company.com:8080`.
+- If the proxy does **TLS interception** (you see a `CERT_*` /
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE` error), Node needs the corporate root CA:
+  set the `NODE_EXTRA_CA_CERTS` environment variable to the CA `.pem` path
+  (your IT team can provide it).
+- `test_connection` reports the detected proxy in its output, so a failed run
+  shows exactly what was tried.
+
 > Tip: create an Odoo API key at **Settings → Account Security → New API Key**
 > and use that instead of your password.
 
