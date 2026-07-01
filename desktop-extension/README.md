@@ -6,7 +6,7 @@ terminal, no config files, no Python/Node install required.
 
 ## For end users
 
-1. Download `odoo-connector.mcpb`.
+1. Download [**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb).
 2. Open **Claude Desktop → Settings → Extensions**.
 3. Drag the file in (or double-click it).
 4. Fill in the form — **Odoo URL**, **Database**, **Username**, **API key** —
@@ -33,4 +33,13 @@ block declares the four fields shown in the install form, which are mapped to
 ## Distributing
 
 Attach `odoo-connector.mcpb` to a **GitHub Release** — that's the download link
-you share. The file is a build artifact and is not committed to the repo.
+you share. The file is a build artifact and is not committed to the repo. The
+stable link that always points at the newest release's asset is:
+
+```
+https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb
+```
+
+> **Note:** for others to download this, the repository (or at least the
+> release) must be **public**. A private repo's release assets are only
+> reachable by users with repo access.

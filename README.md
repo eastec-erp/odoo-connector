@@ -5,10 +5,10 @@ A Claude connector ([MCP](https://modelcontextprotocol.io) server) for [Odoo](ht
 ## Installing (easiest → most manual)
 
 **1. Claude Desktop Extension (recommended for most users).** Download
-`odoo-connector.mcpb` from the [desktop extension](desktop-extension/), open
-**Claude Desktop → Settings → Extensions**, drop the file in, and fill in the
-form (Odoo URL, database, username, API key). No terminal, no config files.
-See [`desktop-extension/README.md`](desktop-extension/README.md).
+[**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/releases/latest/download/odoo-connector.mcpb)
+(latest release), open **Claude Desktop → Settings → Extensions**, drop the file
+in, and fill in the form (Odoo URL, database, username, API key). No terminal,
+no config files. See [`desktop-extension/README.md`](desktop-extension/README.md).
 
 **2. Command-line (Claude Code / power users).** Run one of the servers below
 as a local stdio MCP server and register it with `claude mcp add`. See each
