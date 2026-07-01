@@ -9,10 +9,11 @@ terminal, no config files, no Python/Node install required.
 1. Download [**`odoo-connector.mcpb`**](https://github.com/eastec-erp/odoo-connector/raw/main/desktop-extension/odoo-connector.mcpb)
    (on the file page, click **Download raw file**).
 2. Open **Claude Desktop → Settings → Extensions**.
-3. Drag the file in (or double-click it).
-4. Fill in the form — **Odoo URL**, **Database**, **Username**, **API key** —
-   and click **Save**. The API key field is stored securely.
-   *(Database is optional — leave it blank to auto-detect.)*
+3. Scroll to **Advanced** and click **Install extension…**, then select the
+   downloaded `odoo-connector.mcpb`.
+4. Fill in the form — **Odoo URL**, **Username**, **API key** — and click
+   **Save**. The API key field is stored securely.
+   *(Leave **Database** blank — it's auto-detected.)*
 5. In a chat, say **"test my Odoo connection"** (or pick the **setup** prompt).
    Claude runs a staged health check and confirms you're connected — or tells
    you the exact field to fix.

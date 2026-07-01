@@ -5,10 +5,12 @@ setup wizard.
 ## Install (Claude Desktop)
 
 1. Download **`odoo-connector.mcpb`** from the Assets below.
-2. Open **Claude Desktop → Settings → Extensions** and drop the file in.
-3. Fill in your **Odoo URL**, **username**, and **API key**
-   (Database is optional — it's auto-detected). Click **Save**.
-4. In a chat, say **"test my Odoo connection"** — Claude confirms you're
+2. Open **Claude Desktop → Settings → Extensions**.
+3. Scroll to **Advanced** and click **Install extension…**, then select the
+   downloaded `odoo-connector.mcpb`.
+4. Fill in your **Odoo URL**, **username**, and **API key**
+   (leave **Database** blank — it's auto-detected). Click **Save**.
+5. In a chat, say **"test my Odoo connection"** — Claude confirms you're
    connected or tells you the exact field to fix.
 
 No terminal, no config files, no Python/Node install required.
