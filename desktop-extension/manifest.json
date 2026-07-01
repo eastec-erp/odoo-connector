@@ -4,7 +4,7 @@
   "display_name": "Odoo Connector",
   "version": "0.1.0",
   "description": "Connect Claude to your Odoo instance — search, read, create and update records.",
-  "long_description": "Exposes your Odoo ERP over its external API as tools Claude can call: list models, search records with domains, read/create/update/delete records, and call arbitrary model methods. Each user configures their own Odoo instance and credentials below — nothing is shared or hardcoded.",
+  "long_description": "Exposes your Odoo ERP over its external API as tools Claude can call: list models, search records with domains, read/create/update/delete records, and call arbitrary model methods. Each user configures their own Odoo instance and credentials below — nothing is shared or hardcoded.\n\nAfter installing, just ask Claude to \"test my Odoo connection\" (or run the built-in \"setup\" prompt) — it runs a staged health check and tells you exactly which field to fix if anything is wrong.",
   "author": {
     "name": "aq"
   },
@@ -23,6 +23,7 @@
     }
   },
   "tools": [
+    { "name": "test_connection", "description": "Verify configuration and credentials with a staged health check." },
     { "name": "list_models", "description": "List available Odoo models." },
     { "name": "search_records", "description": "Search a model and return matching records." },
     { "name": "read_record", "description": "Read the fields of a single record by id." },
@@ -40,9 +41,9 @@
     },
     "odoo_db": {
       "type": "string",
-      "title": "Database name",
-      "description": "Odoo database name. For *.odoo.com this is usually your subdomain (e.g. \"yourco\").",
-      "required": true
+      "title": "Database name (optional)",
+      "description": "Leave blank to auto-detect — derived from the *.odoo.com subdomain, or the sole database if the server exposes one. Set it only if auto-detect fails or you run multiple databases.",
+      "required": false
     },
     "odoo_username": {
       "type": "string",

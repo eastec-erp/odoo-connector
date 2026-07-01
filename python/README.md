@@ -49,5 +49,8 @@ claude mcp add odoo -- odoo-connector
 
 ## Tools
 
-`list_models`, `search_records`, `read_record`, `create_record`,
-`update_record`, `delete_record`, `call_method`. See [`server.py`](src/odoo_connector/server.py).
+`test_connection`, `list_models`, `search_records`, `read_record`,
+`create_record`, `update_record`, `delete_record`, `call_method`, plus a
+`setup` prompt. See [`server.py`](src/odoo_connector/server.py).
+
+Run `test_connection` first — it staged-checks the config and credentials.

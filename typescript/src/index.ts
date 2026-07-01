@@ -23,6 +23,28 @@ function ok(data: unknown) {
 const server = new McpServer({ name: "odoo-connector", version: "0.1.0" });
 
 server.tool(
+  "test_connection",
+  "Verify the Odoo configuration and credentials. Runs a staged health check " +
+    "(server reachable → database → authentication → user identity) and returns " +
+    "a report with an actionable hint for whichever step fails. Call this first " +
+    "after installing.",
+  {},
+  async () => {
+    try {
+      return ok(await client().testConnection());
+    } catch (err) {
+      // Configuration errors (missing fields) surface here.
+      const message = err instanceof Error ? err.message : String(err);
+      return ok({
+        ok: false,
+        message: `❌ ${message}`,
+        hint: "Open Claude Desktop → Settings → Extensions → Odoo Connector and fill in the required fields.",
+      });
+    }
+  }
+);
+
+server.tool(
   "list_models",
   "List available Odoo models. Optionally filter by a case-insensitive substring of the technical name or label.",
   { name_filter: z.string().optional() },
@@ -104,6 +126,32 @@ server.tool(
   },
   async ({ model, method, args, kwargs }) =>
     ok(await client().executeKw(model, method, args ?? [], kwargs ?? {}))
+);
+
+// A guided setup "wizard" surfaced in Claude Desktop's prompt menu.
+server.prompt(
+  "setup",
+  "Guided setup & connection test for the Odoo Connector.",
+  async () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: [
+            "Help me set up the Odoo Connector. Do this step by step:",
+            "",
+            "1. Call the `test_connection` tool.",
+            "2. Read the `checks` array and tell me, in plain language, which steps passed and which failed.",
+            "3. If everything passed, confirm I'm connected (name the database and user) and suggest one thing I can try, e.g. \"list my most recent customers\".",
+            "4. If a step failed, use the `hint` to tell me the EXACT field to fix in Claude Desktop → Settings → Extensions → Odoo Connector, then ask me to save and say \"retry\" so you can run `test_connection` again.",
+            "",
+            "Reminder for me: on Odoo Online (*.odoo.com) I should use an API key (Settings → Account Security → New API Key), not my account password.",
+          ].join("\n"),
+        },
+      },
+    ],
+  })
 );
 
 async function main() {

@@ -30,10 +30,22 @@ They are feature-equivalent; the Desktop Extension bundles the TypeScript one.
 Each end user supplies their **own** Odoo credentials at install time — nothing
 is hardcoded or shared.
 
+## First run — verify the connection
+
+After installing, just tell Claude:
+
+> **"Test my Odoo connection"**
+
+Claude calls the `test_connection` tool, which runs a staged health check —
+**server reachable → database → authentication → user identity** — and reports
+which step failed with the exact field to fix. There's also a built-in
+**`setup`** prompt (in Claude Desktop's prompt menu) that walks you through it.
+
 ## Tools exposed
 
 Both servers expose the same tools:
 
+- `test_connection` — staged health check of config + credentials (run this first)
 - `list_models` — list available Odoo models (optionally filtered)
 - `search_records` — search a model with a domain, returns matching records
 - `read_record` — read fields of a record by id
@@ -48,12 +60,16 @@ Both implementations read the same environment variables (see each dir's `.env.e
 
 ```
 ODOO_URL=https://your-instance.odoo.com
-ODOO_DB=your-database-name
+ODOO_DB=your-database-name        # optional — auto-detected (see below)
 ODOO_USERNAME=your-username-or-email
 ODOO_PASSWORD=your-password-or-api-key
 ```
 
-> Tip: use an Odoo **API key** (Settings → Account Security → New API Key) instead of your password.
+- **`ODOO_DB` is optional.** Leave it blank and it's auto-detected: the
+  `*.odoo.com` subdomain, or the sole database if the server exposes one. Set it
+  only if auto-detect fails or you run multiple databases.
+- **Tip:** use an Odoo **API key** (Settings → Account Security → New API Key)
+  instead of your password.
 
 ## Quick start
 

@@ -10,6 +10,8 @@ Docs: https://www.odoo.com/documentation/master/developer/reference/external_api
 from __future__ import annotations
 
 import os
+import socket
+import urllib.parse
 import xmlrpc.client
 from typing import Any
 
@@ -31,11 +33,12 @@ class OdooClient:
         self.username = username or os.environ.get("ODOO_USERNAME", "")
         self.password = password or os.environ.get("ODOO_PASSWORD", "")
 
+        # Database is intentionally NOT required here — it can be auto-detected
+        # later (subdomain for *.odoo.com, or a single-DB server).
         missing = [
             name
             for name, val in (
                 ("ODOO_URL", self.url),
-                ("ODOO_DB", self.db),
                 ("ODOO_USERNAME", self.username),
                 ("ODOO_PASSWORD", self.password),
             )
@@ -49,25 +52,151 @@ class OdooClient:
 
         self._common = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/common")
         self._models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object")
+        self._db_proxy = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/db")
         self._uid: int | None = None
+
+    def version(self) -> dict:
+        """Server version info — no authentication required."""
+        try:
+            return self._common.version()
+        except (OSError, xmlrpc.client.ProtocolError, socket.gaierror) as exc:
+            raise OdooError(f"Could not reach Odoo at {self.url} ({exc}).") from exc
+
+    def ensure_db(self) -> str:
+        """Resolve the database name, auto-detecting when not configured:
+
+        1. explicit ODOO_DB, else
+        2. the subdomain of a ``*.odoo.com`` URL, else
+        3. the sole database if the server exposes exactly one.
+        """
+        if self.db:
+            return self.db
+
+        host = urllib.parse.urlparse(self.url).hostname or ""
+        if host.endswith(".odoo.com"):
+            self.db = host.split(".")[0]
+            return self.db
+
+        try:
+            dbs = self._db_proxy.list()
+        except (OSError, xmlrpc.client.Fault, xmlrpc.client.ProtocolError):
+            dbs = None
+        if isinstance(dbs, list) and len(dbs) == 1:
+            self.db = str(dbs[0])
+            return self.db
+        if isinstance(dbs, list) and len(dbs) > 1:
+            raise OdooError(
+                f"Server exposes multiple databases ({', '.join(dbs)}). "
+                "Set the Database field to pick one."
+            )
+
+        raise OdooError(
+            "Could not determine the Odoo database name. Set the Database field "
+            "(for *.odoo.com it is usually your subdomain)."
+        )
 
     @property
     def uid(self) -> int:
         """Authenticate lazily and cache the resulting user id."""
         if self._uid is None:
+            db = self.ensure_db()
             try:
-                uid = self._common.authenticate(
-                    self.db, self.username, self.password, {}
-                )
+                uid = self._common.authenticate(db, self.username, self.password, {})
             except xmlrpc.client.Fault as exc:  # pragma: no cover - network
                 raise OdooError(f"Authentication failed: {exc.faultString}") from exc
             if not uid:
                 raise OdooError(
-                    "Authentication failed: check ODOO_DB, ODOO_USERNAME and "
-                    "ODOO_PASSWORD (or API key)."
+                    "Authentication failed: check the username and API key/password "
+                    f'for database "{db}".'
                 )
             self._uid = uid
         return self._uid
+
+    def test_connection(self) -> dict:
+        """Staged health check of config and credentials.
+
+        Returns a structured report (never raises) so it can drive the
+        ``test_connection`` tool and the setup wizard.
+        """
+        checks: list[dict] = []
+
+        # 1. Server reachable?
+        try:
+            server_version = self.version().get("server_version")
+            checks.append(
+                {
+                    "step": "Server reachable",
+                    "status": "pass",
+                    "detail": f"Odoo {server_version} at {self.url}",
+                }
+            )
+        except OdooError as exc:
+            checks.append({"step": "Server reachable", "status": "fail", "detail": str(exc)})
+            return {
+                "ok": False,
+                "url": self.url,
+                "checks": checks,
+                "message": "❌ Could not reach the Odoo server.",
+                "hint": "Check the Odoo URL — it should include https:// and point at your instance, e.g. https://yourco.odoo.com",
+            }
+
+        # 2. Database?
+        try:
+            database = self.ensure_db()
+            checks.append({"step": "Database resolved", "status": "pass", "detail": database})
+        except OdooError as exc:
+            checks.append({"step": "Database resolved", "status": "fail", "detail": str(exc)})
+            return {
+                "ok": False,
+                "url": self.url,
+                "server_version": server_version,
+                "checks": checks,
+                "message": "❌ Could not determine the database.",
+                "hint": 'Fill in the Database field. For *.odoo.com it is usually your subdomain (e.g. "yourco").',
+            }
+
+        # 3. Authentication?
+        try:
+            uid = self.uid
+            checks.append({"step": "Authentication", "status": "pass", "detail": f"user id {uid}"})
+        except OdooError as exc:
+            checks.append({"step": "Authentication", "status": "fail", "detail": str(exc)})
+            return {
+                "ok": False,
+                "url": self.url,
+                "database": database,
+                "server_version": server_version,
+                "checks": checks,
+                "message": "❌ Authentication failed.",
+                "hint": "Check the Username and API key/password. On *.odoo.com create an API key at Settings → Account Security → New API Key and use that.",
+            }
+
+        # 4. Who are we? (non-fatal)
+        user = None
+        try:
+            rows = self.read("res.users", [uid], ["name", "login"])
+            user = rows[0] if rows else None
+            checks.append(
+                {
+                    "step": "User identity",
+                    "status": "pass",
+                    "detail": f"{user['name']} <{user['login']}>" if user else "unknown",
+                }
+            )
+        except OdooError as exc:
+            checks.append({"step": "User identity", "status": "warn", "detail": str(exc)})
+
+        who = user["name"] if user else f"user {uid}"
+        return {
+            "ok": True,
+            "url": self.url,
+            "database": database,
+            "server_version": server_version,
+            "uid": uid,
+            "user": user,
+            "checks": checks,
+            "message": f'✅ Connected to Odoo {server_version} as {who} (database "{database}").',
+        }
 
     def execute_kw(
         self,

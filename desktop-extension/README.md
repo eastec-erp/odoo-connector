@@ -11,6 +11,10 @@ terminal, no config files, no Python/Node install required.
 3. Drag the file in (or double-click it).
 4. Fill in the form — **Odoo URL**, **Database**, **Username**, **API key** —
    and click **Save**. The API key field is stored securely.
+   *(Database is optional — leave it blank to auto-detect.)*
+5. In a chat, say **"test my Odoo connection"** (or pick the **setup** prompt).
+   Claude runs a staged health check and confirms you're connected — or tells
+   you the exact field to fix.
 
 That's it. Claude now has the Odoo tools available.
 

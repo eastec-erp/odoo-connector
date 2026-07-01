@@ -22,6 +22,41 @@ def client() -> OdooClient:
 
 
 @mcp.tool()
+def test_connection() -> dict:
+    """Verify the Odoo configuration and credentials.
+
+    Runs a staged health check (server reachable -> database -> authentication
+    -> user identity) and returns a report with an actionable hint for whichever
+    step fails. Call this first after installing.
+    """
+    try:
+        return client().test_connection()
+    except OdooError as exc:
+        return {
+            "ok": False,
+            "message": f"❌ {exc}",
+            "hint": "Set ODOO_URL, ODOO_USERNAME and ODOO_PASSWORD (and optionally ODOO_DB).",
+        }
+
+
+@mcp.prompt()
+def setup() -> str:
+    """Guided setup & connection test for the Odoo Connector."""
+    return (
+        "Help me set up the Odoo Connector. Do this step by step:\n\n"
+        "1. Call the `test_connection` tool.\n"
+        "2. Read the `checks` array and tell me, in plain language, which steps "
+        "passed and which failed.\n"
+        "3. If everything passed, confirm I'm connected (name the database and "
+        'user) and suggest one thing I can try, e.g. "list my most recent customers".\n'
+        "4. If a step failed, use the `hint` to tell me the EXACT setting to fix, "
+        'then ask me to fix it and say "retry" so you can run `test_connection` again.\n\n'
+        "Reminder for me: on Odoo Online (*.odoo.com) I should use an API key "
+        "(Settings → Account Security → New API Key), not my account password."
+    )
+
+
+@mcp.tool()
 def list_models(name_filter: str | None = None) -> list[dict]:
     """List available Odoo models.
 
