@@ -9,15 +9,30 @@ Docs: https://www.odoo.com/documentation/master/developer/reference/external_api
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import urllib.parse
+import urllib.request
 import xmlrpc.client
 from typing import Any
 
 
 class OdooError(RuntimeError):
     """Raised when Odoo returns a fault or configuration is missing."""
+
+
+def _clean(value: str | None) -> str:
+    """Normalise a config value.
+
+    Claude Desktop passes an *unresolved* template placeholder (e.g.
+    ``${user_config.odoo_db}``) when an optional field is left blank; treat that
+    — and surrounding whitespace — as empty so auto-detection kicks in.
+    """
+    s = (value or "").strip()
+    if s.startswith("${") and s.endswith("}"):
+        return ""
+    return s
 
 
 class OdooClient:
@@ -28,10 +43,10 @@ class OdooClient:
         username: str | None = None,
         password: str | None = None,
     ) -> None:
-        self.url = (url or os.environ.get("ODOO_URL", "")).rstrip("/")
-        self.db = db or os.environ.get("ODOO_DB", "")
-        self.username = username or os.environ.get("ODOO_USERNAME", "")
-        self.password = password or os.environ.get("ODOO_PASSWORD", "")
+        self.url = _clean(url or os.environ.get("ODOO_URL", "")).rstrip("/")
+        self.db = _clean(db or os.environ.get("ODOO_DB", ""))
+        self.username = _clean(username or os.environ.get("ODOO_USERNAME", ""))
+        self.password = _clean(password or os.environ.get("ODOO_PASSWORD", ""))
 
         # Database is intentionally NOT required here — it can be auto-detected
         # later (subdomain for *.odoo.com, or a single-DB server).
@@ -72,28 +87,55 @@ class OdooClient:
         if self.db:
             return self.db
 
+        # 1. Authoritative: ask the server which database(s) it serves for this
+        #    host. On Odoo Online the DB name is e.g. "eurofast-main-29228316",
+        #    NOT the subdomain, so this must win over the heuristic below.
+        listed = self._list_databases()
+        if len(listed) == 1:
+            self.db = str(listed[0])
+            return self.db
+        if len(listed) > 1:
+            raise OdooError(
+                f"Server exposes multiple databases ({', '.join(listed)}). "
+                "Set the Database field to pick one."
+            )
+
+        # 2. Heuristic fallback: the subdomain of a *.odoo.com URL.
         host = urllib.parse.urlparse(self.url).hostname or ""
         if host.endswith(".odoo.com"):
             self.db = host.split(".")[0]
             return self.db
 
+        raise OdooError(
+            "Could not determine the Odoo database name. Set the Database field."
+        )
+
+    def _list_databases(self) -> list:
+        """Best-effort list of databases the server exposes.
+
+        Tries the web ``/web/database/list`` controller first (works on Odoo
+        Online, host-filtered), then the RPC ``db.list`` service (self-hosted
+        with list_db enabled). Returns ``[]`` when neither is available.
+        """
+        try:
+            req = urllib.request.Request(
+                f"{self.url}/web/database/list",
+                data=json.dumps({"jsonrpc": "2.0", "method": "call", "params": {}}).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                body = json.load(resp)
+            if isinstance(body.get("result"), list):
+                return body["result"]
+        except Exception:
+            pass  # try RPC next
         try:
             dbs = self._db_proxy.list()
+            if isinstance(dbs, list):
+                return dbs
         except (OSError, xmlrpc.client.Fault, xmlrpc.client.ProtocolError):
-            dbs = None
-        if isinstance(dbs, list) and len(dbs) == 1:
-            self.db = str(dbs[0])
-            return self.db
-        if isinstance(dbs, list) and len(dbs) > 1:
-            raise OdooError(
-                f"Server exposes multiple databases ({', '.join(dbs)}). "
-                "Set the Database field to pick one."
-            )
-
-        raise OdooError(
-            "Could not determine the Odoo database name. Set the Database field "
-            "(for *.odoo.com it is usually your subdomain)."
-        )
+            pass
+        return []
 
     @property
     def uid(self) -> int:

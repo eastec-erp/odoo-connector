@@ -38,6 +38,16 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * Normalise a config value. Claude Desktop passes an *unresolved* template
+ * placeholder (e.g. "${user_config.odoo_db}") when an optional field is left
+ * blank; treat that — and whitespace — as empty so auto-detection kicks in.
+ */
+function clean(value: string | undefined): string {
+  const s = (value ?? "").trim();
+  return /^\$\{.*\}$/.test(s) ? "" : s;
+}
+
 export class OdooClient {
   private url: string;
   private db: string;
@@ -52,10 +62,10 @@ export class OdooClient {
     username?: string;
     password?: string;
   }) {
-    this.url = (opts?.url ?? process.env.ODOO_URL ?? "").replace(/\/$/, "");
-    this.db = opts?.db ?? process.env.ODOO_DB ?? "";
-    this.username = opts?.username ?? process.env.ODOO_USERNAME ?? "";
-    this.password = opts?.password ?? process.env.ODOO_PASSWORD ?? "";
+    this.url = clean(opts?.url ?? process.env.ODOO_URL).replace(/\/$/, "");
+    this.db = clean(opts?.db ?? process.env.ODOO_DB);
+    this.username = clean(opts?.username ?? process.env.ODOO_USERNAME);
+    this.password = clean(opts?.password ?? process.env.ODOO_PASSWORD);
 
     // Database is intentionally NOT required here — it can be auto-detected
     // later (subdomain for *.odoo.com, or a single-DB server).
@@ -132,6 +142,22 @@ export class OdooClient {
   async ensureDb(): Promise<string> {
     if (this.db) return this.db;
 
+    // 1. Authoritative: ask the server which database(s) it serves for this
+    //    host. On Odoo Online the DB name is e.g. "eurofast-main-29228316",
+    //    NOT the subdomain, so this must win over the heuristic below.
+    const listed = await this.listDatabases();
+    if (listed.length === 1) {
+      this.db = listed[0];
+      return this.db;
+    }
+    if (listed.length > 1) {
+      throw new OdooError(
+        `Server exposes multiple databases (${listed.join(", ")}). ` +
+          "Set the Database field to pick one."
+      );
+    }
+
+    // 2. Heuristic fallback: the subdomain of a *.odoo.com URL.
     try {
       const host = new URL(this.url).hostname;
       if (host.endsWith(".odoo.com")) {
@@ -139,30 +165,41 @@ export class OdooClient {
         return this.db;
       }
     } catch {
-      /* fall through to db.list */
-    }
-
-    try {
-      const dbs = (await this.jsonRpc("db", "list", [])) as unknown;
-      if (Array.isArray(dbs) && dbs.length === 1) {
-        this.db = String(dbs[0]);
-        return this.db;
-      }
-      if (Array.isArray(dbs) && dbs.length > 1) {
-        throw new OdooError(
-          `Server exposes multiple databases (${dbs.join(", ")}). ` +
-            "Set the Database field to pick one."
-        );
-      }
-    } catch (err) {
-      if (err instanceof OdooError && err.message.includes("multiple")) throw err;
-      // db.list is often disabled on hosted Odoo — fall through to a clear ask.
+      /* fall through */
     }
 
     throw new OdooError(
-      "Could not determine the Odoo database name. Set the Database field " +
-        "(for *.odoo.com it is usually your subdomain)."
+      "Could not determine the Odoo database name. Set the Database field."
     );
+  }
+
+  /**
+   * Best-effort list of databases the server exposes. Tries the web
+   * `/web/database/list` controller first (works on Odoo Online, host-filtered),
+   * then the RPC `db.list` service (self-hosted with list_db enabled).
+   * Returns [] when neither is available.
+   */
+  private async listDatabases(): Promise<string[]> {
+    try {
+      const res = await fetch(`${this.url}/web/database/list`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: {} }),
+      });
+      if (res.ok) {
+        const body = (await res.json()) as JsonRpcResponse;
+        if (Array.isArray(body.result)) return body.result as string[];
+      }
+    } catch {
+      /* try RPC next */
+    }
+    try {
+      const dbs = await this.jsonRpc("db", "list", []);
+      if (Array.isArray(dbs)) return dbs as string[];
+    } catch {
+      /* neither available */
+    }
+    return [];
   }
 
   /** Authenticate lazily and cache the user id. */
