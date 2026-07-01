@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "odoo-connector",
   "display_name": "Odoo Connector",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Connect Claude to your Odoo instance — search, read, create and update records.",
   "long_description": "Exposes your Odoo ERP over its external API as tools Claude can call: list models, search records with domains, read/create/update/delete records, and call arbitrary model methods. Each user configures their own Odoo instance and credentials below — nothing is shared or hardcoded.\n\nAfter installing, just ask Claude to \"test my Odoo connection\" (or run the built-in \"setup\" prompt) — it runs a staged health check and tells you exactly which field to fix if anything is wrong.",
   "author": {

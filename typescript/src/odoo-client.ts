@@ -39,6 +39,24 @@ function errMsg(err: unknown): string {
 }
 
 /**
+ * Node's global fetch throws a generic "fetch failed"; the real reason (DNS,
+ * TLS, proxy, refused connection) lives in `err.cause`. Surface it so a failed
+ * "Server reachable" check is actually diagnosable.
+ */
+function networkFailureDetail(err: unknown): string {
+  const base = errMsg(err);
+  const cause = (err as { cause?: unknown })?.cause;
+  if (cause instanceof Error || (cause && typeof cause === "object")) {
+    const c = cause as { code?: string; message?: string };
+    const code = c.code ? `${c.code}: ` : "";
+    const msg = c.message ?? String(cause);
+    if (msg && msg !== base) return `${base} — ${code}${msg}`;
+    if (code) return `${base} — ${code.trim()}`;
+  }
+  return base;
+}
+
+/**
  * Normalise a config value. Claude Desktop passes an *unresolved* template
  * placeholder (e.g. "${user_config.odoo_db}") when an optional field is left
  * blank; treat that — and whitespace — as empty so auto-detection kicks in.
@@ -106,9 +124,9 @@ export class OdooClient {
         }),
       });
     } catch (err) {
-      // Network-level failure: DNS, TLS, connection refused, etc.
+      // Network-level failure: DNS, TLS, connection refused, proxy, etc.
       throw new OdooError(
-        `Could not reach Odoo at ${this.url} (${errMsg(err)}).`
+        `Could not reach Odoo at ${this.url} (${networkFailureDetail(err)}).`
       );
     }
 

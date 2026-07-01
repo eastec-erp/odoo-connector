@@ -20,7 +20,7 @@ function ok(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-const server = new McpServer({ name: "odoo-connector", version: "0.1.1" });
+const server = new McpServer({ name: "odoo-connector", version: "0.1.2" });
 
 server.tool(
   "test_connection",
