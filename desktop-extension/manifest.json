@@ -1,0 +1,66 @@
+{
+  "dxt_version": "0.1",
+  "name": "odoo-connector",
+  "display_name": "Odoo Connector",
+  "version": "0.1.0",
+  "description": "Connect Claude to your Odoo instance — search, read, create and update records.",
+  "long_description": "Exposes your Odoo ERP over its external API as tools Claude can call: list models, search records with domains, read/create/update/delete records, and call arbitrary model methods. Each user configures their own Odoo instance and credentials below — nothing is shared or hardcoded.",
+  "author": {
+    "name": "aq"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "ODOO_URL": "${user_config.odoo_url}",
+        "ODOO_DB": "${user_config.odoo_db}",
+        "ODOO_USERNAME": "${user_config.odoo_username}",
+        "ODOO_PASSWORD": "${user_config.odoo_password}"
+      }
+    }
+  },
+  "tools": [
+    { "name": "list_models", "description": "List available Odoo models." },
+    { "name": "search_records", "description": "Search a model and return matching records." },
+    { "name": "read_record", "description": "Read the fields of a single record by id." },
+    { "name": "create_record", "description": "Create a new record and return its id." },
+    { "name": "update_record", "description": "Update fields on an existing record." },
+    { "name": "delete_record", "description": "Delete a record by id." },
+    { "name": "call_method", "description": "Call an arbitrary method on a model." }
+  ],
+  "user_config": {
+    "odoo_url": {
+      "type": "string",
+      "title": "Odoo URL",
+      "description": "Base URL of your Odoo instance, e.g. https://yourco.odoo.com",
+      "required": true
+    },
+    "odoo_db": {
+      "type": "string",
+      "title": "Database name",
+      "description": "Odoo database name. For *.odoo.com this is usually your subdomain (e.g. \"yourco\").",
+      "required": true
+    },
+    "odoo_username": {
+      "type": "string",
+      "title": "Username / email",
+      "description": "The login you use for Odoo.",
+      "required": true
+    },
+    "odoo_password": {
+      "type": "string",
+      "title": "API key or password",
+      "description": "Recommended: an Odoo API key (Settings → Account Security → New API Key).",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

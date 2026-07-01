@@ -2,14 +2,33 @@
 
 A Claude connector ([MCP](https://modelcontextprotocol.io) server) for [Odoo](https://www.odoo.com), exposing Odoo's records and methods as tools Claude can call.
 
+## Installing (easiest → most manual)
+
+**1. Claude Desktop Extension (recommended for most users).** Download
+`odoo-connector.mcpb` from the [desktop extension](desktop-extension/), open
+**Claude Desktop → Settings → Extensions**, drop the file in, and fill in the
+form (Odoo URL, database, username, API key). No terminal, no config files.
+See [`desktop-extension/README.md`](desktop-extension/README.md).
+
+**2. Command-line (Claude Code / power users).** Run one of the servers below
+as a local stdio MCP server and register it with `claude mcp add`. See each
+implementation's README.
+
+---
+
+## Implementations
+
 This repo contains **two parallel implementations** sharing the same tool surface:
 
-| Dir | Stack | Odoo transport |
-|-----|-------|----------------|
-| [`python/`](python/) | Python + [FastMCP](https://github.com/modelcontextprotocol/python-sdk) | XML-RPC (`xmlrpc.client`) |
-| [`typescript/`](typescript/) | Node + [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) | JSON-RPC (`/jsonrpc`) |
+| Dir | Stack | Odoo transport | Used by |
+|-----|-------|----------------|---------|
+| [`python/`](python/) | Python + [FastMCP](https://github.com/modelcontextprotocol/python-sdk) | XML-RPC (`xmlrpc.client`) | CLI install |
+| [`typescript/`](typescript/) | Node + [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) | JSON-RPC (`/jsonrpc`) | CLI install + `.mcpb` bundle |
 
-Pick whichever fits your deployment. They are feature-equivalent.
+They are feature-equivalent; the Desktop Extension bundles the TypeScript one.
+
+Each end user supplies their **own** Odoo credentials at install time — nothing
+is hardcoded or shared.
 
 ## Tools exposed
 

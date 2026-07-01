@@ -1,0 +1,11 @@
+{
+  "name": "odoo-connector-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled runtime for the Odoo Connector Claude Desktop Extension",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.4.0",
+    "zod": "^3.23.8"
+  }
+}
